@@ -79,7 +79,7 @@ if [ -e "$immutable_plugin" ] || [ -L "$immutable_plugin" ]; then
 else
     atomic_copy "$plugin_file" "$immutable_plugin"
 fi
-for module in workspace_grid.lua workspace_grid/core.lua workspace_grid/hyprland.lua workspace_grid/overview.lua; do
+for module in workspace_grid/core.lua workspace_grid/hyprland.lua workspace_grid/overview.lua; do
     atomic_copy "$project_dir/$module" "$config_dir/$module"
 done
 temporary=$(mktemp "$config_dir/.hypraxis-link.XXXXXX")
@@ -87,6 +87,8 @@ rm -f -- "$temporary"
 ln -s -- "hypraxis-overview/$plugin_hash.so" "$temporary"
 mv -f -- "$temporary" "$config_dir/hypraxis_overview.so"
 temporary=
+# Publish the watched entrypoint only after every dependency is available.
+atomic_copy "$project_dir/workspace_grid.lua" "$config_dir/workspace_grid.lua"
 
 # Preserve the user's symlink and edit its resolved target atomically.
 if ! awk '
