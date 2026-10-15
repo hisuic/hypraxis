@@ -14,6 +14,7 @@ test: check
 	$(LUA) tests/hyprland.lua
 	$(LUA) tests/bindings.lua
 	$(LUA) tests/overview.lua
+	sh tests/install.sh
 
 plugin:
 	cmake -S . -B "$(BUILD_DIR)" -DCMAKE_BUILD_TYPE=Release
