@@ -209,6 +209,35 @@ PHLWORKSPACE findWorkspace(WORKSPACEID id) {
     return {};
 }
 
+Framebuffer thumbnail(const Framebuffer& source) {
+    constexpr double MAX_EDGE = 1600.0;
+    const double longest = std::max(source->m_size.x, source->m_size.y);
+    if (longest <= MAX_EDGE)
+        return source;
+    const int width = std::max(1, static_cast<int>(std::round(source->m_size.x * MAX_EDGE / longest)));
+    const int height = std::max(1, static_cast<int>(std::round(source->m_size.y * MAX_EDGE / longest)));
+    GLint readFramebuffer = 0, drawFramebuffer = 0;
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &readFramebuffer);
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &drawFramebuffer);
+    const GLboolean scissor = glIsEnabled(GL_SCISSOR_TEST);
+    Render::CScopeGuard restore([&] {
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, readFramebuffer);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, drawFramebuffer);
+        if (scissor) glEnable(GL_SCISSOR_TEST); else glDisable(GL_SCISSOR_TEST);
+    });
+    auto reduced = g_pHyprRenderer->createFB("hypraxis-thumbnail");
+    if (!reduced->alloc(width, height, source->m_drmFormat))
+        return source;
+    reduced->setImageDescription(source->imageDescription());
+    reduced->getTexture()->m_transform = source->getTexture()->m_transform;
+    glDisable(GL_SCISSOR_TEST);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<Render::GL::CGLFramebuffer*>(source.get())->getFBID());
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<Render::GL::CGLFramebuffer*>(reduced.get())->getFBID());
+    glBlitFramebuffer(0, 0, static_cast<int>(source->m_size.x), static_cast<int>(source->m_size.y),
+                      0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+    return reduced;
+}
+
 Framebuffer captureWorkspace(PHLMONITOR monitor, const PHLWORKSPACE& workspace) {
     // A foreign monitor's workspace has different geometry. Do not temporarily
     // move its windows or its monitor; the UI displays an explicit placeholder.
@@ -240,7 +269,7 @@ Framebuffer captureWorkspace(PHLMONITOR monitor, const PHLWORKSPACE& workspace) 
     framebuffer->getTexture()->m_transform = Math::wlTransformToHyprutils(Math::invertTransform(monitor->m_transform));
     // Client buffer references remain with the renderer until the real frame
     // following beforeRender submits its normal explicit or implicit fence.
-    return framebuffer;
+    return thumbnail(framebuffer);
 }
 
 // A small, local Gaussian blur makes the background independent of the user's
@@ -555,8 +584,8 @@ class OverviewRenderer::Impl {
                 addRect(result, CBox{content.x + (content.width - lineWidth) / 2, content.y + content.height * 0.37, lineWidth, 2 * scale}, CHyprColor(0.38, 0.60, 0.83, alpha * 0.55), scale);
             }
             const double captionHeight = std::min(38 * scale, content.height * 0.28);
-            CBox caption{content.x, content.y + content.height - captionHeight, content.width, captionHeight};
-            addRect(result, caption, CHyprColor(0.015, 0.023, 0.04, alpha * 0.91));
+            CBox caption{content.x + 3 * scale, content.y + content.height - captionHeight - 3 * scale, content.width - 6 * scale, captionHeight};
+            addRect(result, caption, CHyprColor(0.015, 0.023, 0.04, alpha * 0.91), std::max(0, round - static_cast<int>(border)));
             if (card->label) {
                 const double factor = std::min(1.0, (caption.width - 80 * scale) / card->label->m_size.x);
                 const auto textSize = card->label->m_size * std::max(0.2, factor);
