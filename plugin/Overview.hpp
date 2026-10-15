@@ -37,6 +37,7 @@ class OverviewRenderer {
     void tick();
 
     bool active() const;
+    bool animating() const;
     bool closing() const;
     bool capturing() const;
     PHLMONITOR monitor() const;
