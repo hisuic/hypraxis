@@ -69,6 +69,7 @@ class Runtime {
     std::vector<CHyprSignalListener> listeners;
     SP<CEventLoopTimer> timer;
     std::unordered_set<std::uint32_t> swallowedKeys;
+    std::unordered_set<std::uint32_t> swallowedButtons;
     std::uint32_t repeatCode = 0;
     std::string repeatKey;
     Clock::time_point repeatAt;
@@ -113,8 +114,13 @@ class Runtime {
         listeners.push_back(events.input.mouse.move.listen([this](Vector2D, Event::SCallbackInfo& info) {
             if (renderer.active()) info.cancelled = true;
         }));
-        listeners.push_back(events.input.mouse.button.listen([this](IPointer::SButtonEvent, Event::SCallbackInfo& info) {
-            if (renderer.active()) info.cancelled = true;
+        listeners.push_back(events.input.mouse.button.listen([this](IPointer::SButtonEvent event, Event::SCallbackInfo& info) {
+            if (event.state == WL_POINTER_BUTTON_STATE_RELEASED) {
+                if (swallowedButtons.erase(event.button)) info.cancelled = true;
+            } else if (renderer.active()) {
+                swallowedButtons.insert(event.button);
+                info.cancelled = true;
+            }
         }));
         listeners.push_back(events.input.mouse.axis.listen([this](IPointer::SAxisEvent, Event::SCallbackInfo& info) {
             if (renderer.active()) info.cancelled = true;
@@ -236,7 +242,10 @@ int openOverview(lua_State* L) {
         runtime->callbackState = L;
         runtime->timer->updateTimeout(std::chrono::milliseconds(1));
         return success(L);
-    } catch (const std::exception& error) { return failure(L, error.what()); }
+    } catch (const std::exception& error) {
+        runtime->cancel(false);
+        return failure(L, error.what());
+    }
 }
 
 int updateOverview(lua_State* L) {
