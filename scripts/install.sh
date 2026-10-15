@@ -44,7 +44,9 @@ config_file=$config_dir/hyprland.lua
 [ -f "$config_file" ] || die "expected an existing hyprland.lua in $config_dir"
 config_target=$(readlink -f -- "$config_file") || die "cannot resolve hyprland.lua"
 [ -f "$plugin_file" ] && [ -r "$plugin_file" ] || die "build the native plugin first, or pass --plugin FILE"
-[ ! -L "$config_dir/workspace_grid" ] || die "workspace_grid is a directory symlink; replace that link with a local directory before installing"
+for directory in workspace_grid hypraxis-overview; do
+    [ ! -L "$config_dir/$directory" ] || die "$directory is a directory symlink; replace that link with a local directory before installing"
+done
 for module in workspace_grid.lua workspace_grid/core.lua workspace_grid/hyprland.lua workspace_grid/overview.lua; do
     [ -f "$project_dir/$module" ] || die "missing source module: $module"
     [ ! -d "$config_dir/$module" ] || die "installation path is a directory: $module"
