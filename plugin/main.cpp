@@ -155,7 +155,8 @@ class Runtime {
                 renderer.tick();
                 if (!renderer.active()) clearCallback();
             });
-            if (renderer.active()) self->updateTimeout(std::chrono::milliseconds(16));
+            if (renderer.active() && (renderer.animating() || !repeatKey.empty()))
+                self->updateTimeout(std::chrono::milliseconds(16));
         }, nullptr);
         g_pEventLoopManager->addTimer(timer);
     }
@@ -270,6 +271,7 @@ int status(lua_State* L) {
     boolean("active", runtime->renderer.active());
     boolean("closing", runtime->renderer.closing());
     boolean("capturing", runtime->renderer.capturing());
+    boolean("animating", runtime->renderer.animating());
     integer("origin", runtime->renderer.origin());
     integer("id", selected.id);
     integer("x", selected.x);
