@@ -115,6 +115,32 @@ function M.new(api)
         return vertical(delta, true, follow)
     end
 
+    function controller.overview_state()
+        local id, err = sync()
+        if not id then
+            return nil, err
+        end
+        local x, y = core.from_id(id)
+        local snapshot = { id = id, x = x, y = y, rows = {} }
+        for column = 1, core.DEFAULT_COLUMNS do
+            local _, row = core.from_id(state.column_target(column))
+            snapshot.rows[column] = row
+        end
+        return snapshot
+    end
+
+    function controller.go_to(x, y)
+        local target, err = core.to_id(x, y)
+        if not target then
+            return nil, err
+        end
+        local id, sync_err = sync()
+        if not id then
+            return nil, sync_err
+        end
+        return execute(target, false)
+    end
+
     function controller.stop()
         for _, subscription in ipairs(subscriptions) do
             subscription:remove()
