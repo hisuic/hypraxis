@@ -39,5 +39,31 @@ for _, direction in ipairs({ { key = "Up", delta = -1 }, { key = "Down", delta =
     end, "move window " .. key:lower())
 end
 
+-- Plugin loading is declarative during config evaluation in Hyprland 0.56.2.
+-- The Lua grid stays usable when the optional native module is not installed.
+if type(api.plugin) == "table" and type(api.plugin.load) == "function" then
+    local module_file = package.searchpath and package.searchpath("workspace_grid", package.path)
+    if module_file then
+        local directory = module_file:match("^(.*)/[^/]+$") or "."
+        local plugin_file = directory .. "/hypraxis_overview.so"
+        local file = io.open(plugin_file, "rb")
+        if file then
+            file:close()
+            api.plugin.load(plugin_file)
+        end
+    end
+end
+
+grid.overview = require("workspace_grid.overview").new(api, grid)
+function grid.toggle_overview()
+    return grid.overview.toggle()
+end
+bind("SUPER + space", function()
+    local ok, err = grid.toggle_overview()
+    if not ok and api.notification and type(api.notification.create) == "function" then
+        api.notification.create({ text = tostring(err), timeout = 4000, icon = "warning" })
+    end
+end, "open desktop overview")
+
 rawset(_G, "__hypraxis_workspace_grid", grid)
 return grid
