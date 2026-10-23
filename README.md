@@ -11,7 +11,7 @@ Hyprlandの既存ワークスペースを、プロジェクトの列（X）と�
 
 ## 導入
 
-プロジェクト名はHypraxis、Luaのモジュール名は`workspace_grid`です。設定では`require("workspace_grid")`で読み込みます。
+プロジェクト名はHypraxis、Luaのモジュール名は`hypraxis`です。設定では`require("hypraxis")`で読み込みます。
 
 このリポジトリを取得し、そのルートで以下を実行します。
 
@@ -20,7 +20,7 @@ make plugin
 sh scripts/install.sh
 ```
 
-インストーラーはHyprland設定ディレクトリへモジュールを配置し、既存の`hyprland.lua`に`require("workspace_grid")`がなければ追加します。設定を書き換える前にバックアップを保存し、設定ファイルのシンボリックリンクは保持します。最後にHyprlandをリロードします。
+インストーラーはHyprland設定ディレクトリへモジュールを配置し、既存の`hyprland.lua`に`require("hypraxis")`がなければ追加します。設定を書き換える前にバックアップを保存し、設定ファイルのシンボリックリンクは保持します。最後にHyprlandをリロードします。
 
 独自の設定ディレクトリを使用している場合は、`sh scripts/install.sh --config-dir /path/to/config --no-reload`で配置先を指定し、その設定を使用しているHyprlandをリロードしてください。`--plugin FILE`でビルド済みプラグインも指定できます。
 
@@ -30,17 +30,17 @@ Luaによる従来の操作だけを手動導入する場合は、同名モジ�
 
 ```sh
 hypr_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
-install -d "$hypr_dir/workspace_grid"
-install -m 644 workspace_grid.lua "$hypr_dir/workspace_grid.lua"
-install -m 644 workspace_grid/core.lua "$hypr_dir/workspace_grid/core.lua"
-install -m 644 workspace_grid/hyprland.lua "$hypr_dir/workspace_grid/hyprland.lua"
-install -m 644 workspace_grid/overview.lua "$hypr_dir/workspace_grid/overview.lua"
+install -d "$hypr_dir/hypraxis"
+install -m 644 hypraxis.lua "$hypr_dir/hypraxis.lua"
+install -m 644 hypraxis/core.lua "$hypr_dir/hypraxis/core.lua"
+install -m 644 hypraxis/hyprland.lua "$hypr_dir/hypraxis/hyprland.lua"
+install -m 644 hypraxis/overview.lua "$hypr_dir/hypraxis/overview.lua"
 ```
 
 `hyprland.lua`をバックアップしてから、既存キーバインドの登録**より後**、デフォルトsubmapの位置に次の1行を追加します。
 
 ```lua
-require("workspace_grid")
+require("hypraxis")
 ```
 
 設定ディレクトリはHyprlandがLuaの検索パスに追加するため、`package.path`の変更は不要です。独自の`--config`を使用している場合は、その設定ファイルと同じディレクトリにモジュールを配置します。
@@ -100,7 +100,7 @@ Super + Spaceで現在の画面を背景としてぼかし、中央に選択中�
 ## Luaからの操作
 
 ```lua
-local grid = require("workspace_grid")
+local grid = require("hypraxis")
 grid.switch_column(2)
 grid.step(1)                     -- 下へ
 grid.move_to_column(3)           -- 移動して追従
@@ -112,13 +112,13 @@ local x, y = grid.position()
 
 操作は成功時に`true`、境界・無効な状態・失敗時に`nil, reason`を返します。`position()`は`x, y`または`nil, reason`を返します。Hyprlandの移動に失敗した場合、移動先を記憶に書き込みません。
 
-座標変換は`require("workspace_grid.core").to_id(x, y)`と`from_id(id)`で独立して利用できます。コアの省略可能な第3引数（`from_id`では第2引数）で列数を指定できますが、標準キーバインドとHyprland連携は10列です。
+座標変換は`require("hypraxis.core").to_id(x, y)`と`from_id(id)`で独立して利用できます。コアの省略可能な第3引数（`from_id`では第2引数）で列数を指定できますが、標準キーバインドとHyprland連携は10列です。
 
 ## 削除
 
-`sh scripts/uninstall.sh`で導入したファイルと単独の`require("workspace_grid")`行を削除し、設定をリロードします。設定バックアップと無関係なファイルは保持します。独自の配置先には`--config-dir DIR`を指定できます。
+`sh scripts/uninstall.sh`で導入したファイルと単独の`require("hypraxis")`行を削除し、設定をリロードします。設定バックアップと無関係なファイルは保持します。独自の配置先には`--config-dir DIR`を指定できます。
 
-手動で削除する場合は`hyprland.lua`から`require("workspace_grid")`の1行を削除し、`hyprctl reload config-only`を実行します。その後、導入した`workspace_grid.lua`、`workspace_grid/`、`hypraxis_overview.so`、`hypraxis-overview/`の所有ファイルを削除します。元の設定にあるキーバインドが復活します。読み込み済みネイティブライブラリ自体はHyprland再起動までメモリに残ります。ワークスペースやウィンドウを削除する処理はありません。
+手動で削除する場合は`hyprland.lua`から`require("hypraxis")`の1行を削除し、`hyprctl reload config-only`を実行します。その後、導入した`hypraxis.lua`、`hypraxis/`、`hypraxis_overview.so`、`hypraxis-overview/`の所有ファイルを削除します。元の設定にあるキーバインドが復活します。読み込み済みネイティブライブラリ自体はHyprland再起動までメモリに残ります。ワークスペースやウィンドウを削除する処理はありません。
 
 ## 開発と検証
 
@@ -132,7 +132,7 @@ make test-overview
 
 Lua 5.5.1とLuaJIT 2.1で、それぞれ10,334件のチェックが通っています。従来のグリッド操作についてはHyprland 0.56.2の単一モニター環境で、設定エラーがないこと、列・行の切り替え、外部切り替えとの同期、テスト用のタイルウィンドウの移動と非追従移動、対象外キーの保持、リロード後の重複登録防止を実機で確認しました。
 
-インストールと削除の回帰テスト44件も通っています。隔離したHyprlandでは、仮想キーボードによるSuper + Space・HJKL・Enter・Esc、64回の連続操作、開いたままのリロード／アンロード、画像リソースの解放、アプリへの入力漏れ防止を含む8項目が成功しました。通常の作業環境でも既存プラグインとの共存、Blurとプレビュー、仮選択とキャンセル、静止中のタイマー停止、既存ウィンドウと設定の保持を確認しています。
+インストールと削除の回帰テスト45件も通っています。インストール先だけをLuaの検索パスに指定しても`require("hypraxis")`が成功し、同じディレクトリのネイティブプラグインを探索できることもモックで検証しています。隔離したHyprlandでは、仮想キーボードによるSuper + Space・HJKL・Enter・Esc、64回の連続操作、開いたままのリロード／アンロード、画像リソースの解放、アプリへの入力漏れ防止を含む8項目が成功しました。通常の作業環境でも既存プラグインとの共存、Blurとプレビュー、仮選択とキャンセル、静止中のタイマー停止、既存ウィンドウと設定の保持を確認しています。
 
 `make test-overview`は別プロセスのHyprlandを起動し、foot・wtype・grimを使って実際の描画・入力・確定・取消・リロード・アンロードを検証します。親のHyprlandを操作しません。ログと画像はGit除外対象の`.local/overview-test/`へ保存します。
 
