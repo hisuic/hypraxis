@@ -5,7 +5,7 @@ usage() {
     cat <<'EOF'
 Usage: scripts/uninstall.sh [--config-dir DIR] [--no-reload]
 
-Remove Hypraxis files and standalone require("workspace_grid") lines.
+Remove Hypraxis files and standalone require("hypraxis") lines.
 The default configuration directory is $XDG_CONFIG_HOME/hypr, or ~/.config/hypr.
 Configuration backups and unrelated files are retained.
 EOF
@@ -34,12 +34,12 @@ if [ "$reload" = yes ]; then
 fi
 [ -d "$config_dir" ] || die "configuration directory does not exist: $config_dir"
 config_dir=$(CDPATH= cd -- "$config_dir" && pwd -P)
-for file in workspace_grid.lua hypraxis_overview.so; do
+for file in hypraxis.lua hypraxis_overview.so; do
     [ ! -d "$config_dir/$file" ] || die "expected an installed file, found a directory: $file"
 done
-if [ ! -L "$config_dir/workspace_grid" ]; then
+if [ ! -L "$config_dir/hypraxis" ]; then
     for file in core.lua hyprland.lua overview.lua; do
-        [ ! -d "$config_dir/workspace_grid/$file" ] || die "expected an installed module, found a directory: $file"
+        [ ! -d "$config_dir/hypraxis/$file" ] || die "expected an installed module, found a directory: $file"
     done
 fi
 
@@ -47,7 +47,7 @@ requires() {
     awk -v mode="$1" '
         BEGIN {
             quote = "[\"" sprintf("%c", 39) "]"
-            module = quote "workspace_grid" quote
+            module = quote "hypraxis" quote
             expression = "require[ \t]*(\\([ \t]*" module "[ \t]*\\)|[ \t]+" module ")"
             standalone = "^[ \t]*" expression "[ \t]*;?[ \t]*$"
         }
@@ -73,7 +73,7 @@ config_file=$config_dir/hyprland.lua
 if [ -f "$config_file" ]; then
     config_target=$(readlink -f -- "$config_file") || die "cannot resolve hyprland.lua"
     if requires custom "$config_target"; then
-        die 'hyprland.lua contains a custom workspace_grid require expression; remove that expression before uninstalling (standalone require lines are removed automatically)'
+        die 'hyprland.lua contains a custom Hypraxis require expression; remove that expression before uninstalling (standalone require lines are removed automatically)'
     fi
     if requires present "$config_target"; then
         backup=$config_target.hypraxis-backup-$(date -u +%Y%m%dT%H%M%SZ)-$$
@@ -87,14 +87,14 @@ if [ -f "$config_file" ]; then
     fi
 fi
 
-rm -f -- "$config_dir/workspace_grid.lua" "$config_dir/hypraxis_overview.so"
-if [ -L "$config_dir/workspace_grid" ]; then
-    rm -f -- "$config_dir/workspace_grid"
+rm -f -- "$config_dir/hypraxis.lua" "$config_dir/hypraxis_overview.so"
+if [ -L "$config_dir/hypraxis" ]; then
+    rm -f -- "$config_dir/hypraxis"
 else
     for file in core.lua hyprland.lua overview.lua; do
-        rm -f -- "$config_dir/workspace_grid/$file"
+        rm -f -- "$config_dir/hypraxis/$file"
     done
-    rmdir -- "$config_dir/workspace_grid" 2>/dev/null || :
+    rmdir -- "$config_dir/hypraxis" 2>/dev/null || :
 fi
 if [ -L "$config_dir/hypraxis-overview" ]; then
     rm -f -- "$config_dir/hypraxis-overview"
