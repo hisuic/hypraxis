@@ -11,6 +11,8 @@ Hyprlandの既存ワークスペースを、プロジェクトの列（X）と�
 
 ## 導入
 
+プロジェクト名はHypraxis、Luaのモジュール名は`workspace_grid`です。設定では`require("workspace_grid")`で読み込みます。
+
 このリポジトリを取得し、そのルートで以下を実行します。
 
 ```sh
