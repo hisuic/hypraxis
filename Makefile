@@ -5,7 +5,7 @@ BUILD_DIR ?= .local/build
 .PHONY: check test plugin install test-overview
 
 check:
-	@for file in workspace_grid.lua workspace_grid/*.lua tests/*.lua; do \
+	@for file in hypraxis.lua hypraxis/*.lua tests/*.lua; do \
 		$(LUAC) -p "$$file" || exit 1; \
 	done
 
@@ -14,7 +14,7 @@ test: check
 	$(LUA) tests/hyprland.lua
 	$(LUA) tests/bindings.lua
 	$(LUA) tests/overview.lua
-	sh tests/install.sh
+	LUA="$(LUA)" sh tests/install.sh
 
 plugin:
 	cmake -S . -B "$(BUILD_DIR)" -DCMAKE_BUILD_TYPE=Release
