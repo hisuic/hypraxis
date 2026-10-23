@@ -1,5 +1,7 @@
 # Hypraxis
 
+<img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/6dcf8444-2ddd-4a90-b46d-d505547795ce" />
+
 Hyprlandの既存ワークスペースを、プロジェクトの列（X）と作業空間の行（Y）で操作するLuaモジュールです。列は10個、行は必要に応じて増やせます。ネイティブプラグインを導入すると、背景をぼかした選択画面から上下左右のデスクトップを探せます。タイル配置はHyprlandに任せます。別の常駐プロセスや画面キャプチャ用コマンドは起動しません。
 
 ## 対応環境
