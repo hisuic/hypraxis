@@ -6,7 +6,7 @@ end
 
 local registered, removed, calls = {}, {}, {}
 local creates = 0
-package.preload["workspace_grid.hyprland"] = function()
+package.preload["hypraxis.hyprland"] = function()
     return { new = function()
         creates = creates + 1
         return {
@@ -22,8 +22,8 @@ package.preload["workspace_grid.hyprland"] = function()
     end }
 end
 
-check(not pcall(require, "workspace_grid"), "fail clearly outside Hyprland")
-package.loaded.workspace_grid = nil
+check(not pcall(require, "hypraxis"), "fail clearly outside Hyprland")
+package.loaded.hypraxis = nil
 local submap = "nested"
 _G.hl = {
     get_current_submap = function() return submap end,
@@ -37,9 +37,9 @@ _G.hl = {
         registered[keys] = callback
     end,
 }
-check(not pcall(require, "workspace_grid"), "reject registration inside a submap")
+check(not pcall(require, "hypraxis"), "reject registration inside a submap")
 check(#removed == 0 and creates == 0, "preflight leaves existing bindings untouched")
-package.loaded.workspace_grid = nil
+package.loaded.hypraxis = nil
 submap = ""
 
 local unrelated = function() end
@@ -50,7 +50,7 @@ for x = 1, 10 do
     registered["SUPER + " .. tostring(x % 10)] = function() error("old binding ran") end
     registered["SUPER + SHIFT + " .. tostring(x % 10)] = function() error("old move binding ran") end
 end
-local grid = require("workspace_grid")
+local grid = require("hypraxis")
 check(#removed == 25 and creates == 1, "install exactly 25 target bindings")
 check(type(registered["SUPER + space"]) == "function", "register the overview shortcut")
 check(type(grid.toggle_overview) == "function" and type(grid.overview) == "table", "expose overview controls")
@@ -74,13 +74,13 @@ end
 for _, key in ipairs({ "SUPER + Q", "SUPER + A", "SUPER + mouse_down", "XF86AudioMute" }) do
     check(registered[key] == unrelated, "preserve unrelated bindings")
 end
-check(require("workspace_grid") == grid and #removed == 25, "cached require is idempotent")
-package.loaded.workspace_grid = nil
-check(require("workspace_grid") == grid and #removed == 25 and creates == 1,
+check(require("hypraxis") == grid and #removed == 25, "cached require is idempotent")
+package.loaded.hypraxis = nil
+check(require("hypraxis") == grid and #removed == 25 and creates == 1,
     "manual package cache clearing does not duplicate bindings or handlers")
-_G.__hypraxis_workspace_grid = nil
-package.loaded.workspace_grid = nil
-check(require("workspace_grid") ~= grid and creates == 2 and #removed == 50,
+_G.__hypraxis_grid = nil
+package.loaded.hypraxis = nil
+check(require("hypraxis") ~= grid and creates == 2 and #removed == 50,
     "fresh Lua session registers once")
 
 print(string.format("bindings: %d checks passed", count))
