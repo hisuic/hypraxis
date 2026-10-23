@@ -150,4 +150,4 @@ Do not add personal configuration, investigation logs, absolute paths, or creden
 
 ## License
 
-A license has not yet been selected. A `LICENSE` file will be added once one is chosen.
+Licensed under the BSD-3-Clause license. See [LICENSE](LICENSE) for details.
