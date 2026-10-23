@@ -1,15 +1,15 @@
-local core = require("workspace_grid.core")
+local core = require("hypraxis.core")
 local M = {}
 
 function M.new(api)
-    assert(type(api) == "table", "workspace_grid requires Hyprland's hl API")
+    assert(type(api) == "table", "hypraxis requires Hyprland's hl API")
     for _, name in ipairs({ "get_active_workspace", "get_active_special_workspace",
         "get_active_window", "on", "dispatch" }) do
-        assert(type(api[name]) == "function", "workspace_grid requires hl." .. name)
+        assert(type(api[name]) == "function", "hypraxis requires hl." .. name)
     end
     assert(type(api.dsp) == "table" and type(api.dsp.focus) == "function"
         and type(api.dsp.window) == "table" and type(api.dsp.window.move) == "function",
-        "workspace_grid requires hl.dsp.focus and hl.dsp.window.move")
+        "hypraxis requires hl.dsp.focus and hl.dsp.window.move")
 
     local state = core.new()
     local subscriptions = {}
