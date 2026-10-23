@@ -6,33 +6,33 @@
 
 https://github.com/user-attachments/assets/1480f74b-0b6b-4b7a-b3ca-af09cb9e348d
 
-Hyprlandの既存ワークスペースを、プロジェクトの列（X）と作業空間の行（Y）で操作するLuaモジュールです。列は10個、行は必要に応じて増やせます。ネイティブプラグインを導入すると、背景をぼかした選択画面から上下左右のデスクトップを探せます。タイル配置はHyprlandに任せます。別の常駐プロセスや画面キャプチャ用コマンドは起動しません。
+Hypraxis is a Lua module that organizes existing Hyprland workspaces into project columns (X) and workspace rows (Y). There are 10 columns, with rows added as needed. With the native plugin installed, you can browse desktops in all four directions through an overview with a blurred background. Hyprland handles window tiling. Hypraxis does not launch a separate daemon or screen capture command.
 
-## 対応環境
+## Requirements and compatibility
 
-- Hyprland **0.56.2**のLua設定APIで動作確認しています。0.55や他のバージョンの互換性は未検証です。
-- 現在のアクティブモニターを操作します。初期サポートは単一モニターです。
-- 選択画面はHyprlandと同じコミット・依存ABIのヘッダーでビルドするC++プラグインです。バージョン不一致の場合は読み込みを拒否します。
-- ビルドにはC++23コンパイラー、CMake 3.25以降、make、pkg-config、Hyprland開発ヘッダー、Lua・GLESの開発ファイルが必要です。Lua単体のテストには通常のLuaを使用します。
+- Tested with the Lua configuration API in Hyprland **0.56.2**. Compatibility with 0.55 and other versions has not been verified.
+- Operations target the currently active monitor. Initial support is limited to a single monitor.
+- The overview is a C++ plugin that must be built against headers from the same Hyprland commit and with matching dependency ABIs. It refuses to load if the versions do not match.
+- Building requires a C++23 compiler, CMake 3.25 or later, make, pkg-config, Hyprland development headers, and Lua and GLES development files. The standalone Lua tests run with a standard Lua interpreter.
 
-## 導入
+## Installation
 
-プロジェクト名はHypraxis、Luaのモジュール名は`hypraxis`です。設定では`require("hypraxis")`で読み込みます。
+The project is named Hypraxis, and its Lua module is named `hypraxis`. Load it in your configuration with `require("hypraxis")`.
 
-このリポジトリを取得し、そのルートで以下を実行します。
+Clone this repository and run the following commands from its root:
 
 ```sh
 make plugin
 sh scripts/install.sh
 ```
 
-インストーラーはHyprland設定ディレクトリへモジュールを配置し、既存の`hyprland.lua`に`require("hypraxis")`がなければ追加します。設定を書き換える前にバックアップを保存し、設定ファイルのシンボリックリンクは保持します。最後にHyprlandをリロードします。
+The installer copies the module into the Hyprland configuration directory and adds `require("hypraxis")` to the existing `hyprland.lua` if it is missing. It backs up the configuration before modifying it, preserves configuration file symlinks, and reloads Hyprland when finished.
 
-独自の設定ディレクトリを使用している場合は、`sh scripts/install.sh --config-dir /path/to/config --no-reload`で配置先を指定し、その設定を使用しているHyprlandをリロードしてください。`--plugin FILE`でビルド済みプラグインも指定できます。
+If you use a custom configuration directory, specify it with `sh scripts/install.sh --config-dir /path/to/config --no-reload`, then reload the Hyprland instance using that configuration. You can also specify a prebuilt plugin with `--plugin FILE`.
 
-ネイティブバイナリは内容のハッシュ別のファイルへ配置します。読み込み中の`.so`を上書きしません。既に読み込んでいるネイティブプラグインの更新はHyprland再起動後に反映されます。
+Native binaries are installed under filenames based on their content hashes, so a loaded `.so` is never overwritten. Updates to an already loaded native plugin take effect after restarting Hyprland.
 
-Luaによる従来の操作だけを手動導入する場合は、同名モジュールがないことを確認して以下を実行します。
+To manually install only the Lua grid controls, first make sure no module with the same name exists, then run:
 
 ```sh
 hypr_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
@@ -43,90 +43,90 @@ install -m 644 hypraxis/hyprland.lua "$hypr_dir/hypraxis/hyprland.lua"
 install -m 644 hypraxis/overview.lua "$hypr_dir/hypraxis/overview.lua"
 ```
 
-`hyprland.lua`をバックアップしてから、既存キーバインドの登録**より後**、デフォルトsubmapの位置に次の1行を追加します。
+Back up `hyprland.lua`, then add the following line **after** your existing keybinding definitions, in the default submap:
 
 ```lua
 require("hypraxis")
 ```
 
-設定ディレクトリはHyprlandがLuaの検索パスに追加するため、`package.path`の変更は不要です。独自の`--config`を使用している場合は、その設定ファイルと同じディレクトリにモジュールを配置します。
+Hyprland adds the configuration directory to Lua's search path, so you do not need to modify `package.path`. If you use a custom `--config`, place the module in the same directory as that configuration file.
 
 ```sh
 hyprctl reload config-only
 hyprctl configerrors
 ```
 
-手動更新時も同じ4ファイルを配置し直し、リロードします。ネイティブプラグインがない場合も従来のグリッド操作は使用できます。
+For manual updates, replace the same four files and reload. The grid controls remain available without the native plugin.
 
-## 操作
+## Controls
 
-| キー | 操作 |
+| Key | Action |
 |---|---|
-| Super + 1〜9 / 0 | X=1〜9 / 10の列へ移動 |
-| Super + Alt + Up | 同じ列の1行上へ移動 |
-| Super + Alt + Down | 同じ列の1行下へ移動 |
-| Super + Shift + 1〜9 / 0 | アクティブウィンドウを対応列へ移動し、追従 |
-| Super + Alt + Shift + Up / Down | アクティブウィンドウを上下の行へ移動し、追従 |
-| Super + Space | デスクトップ選択画面を開く／キャンセル |
+| Super + 1–9 / 0 | Switch to column X=1–9 / 10 |
+| Super + Alt + Up | Move up one row in the same column |
+| Super + Alt + Down | Move down one row in the same column |
+| Super + Shift + 1–9 / 0 | Move the active window to the corresponding column and follow it |
+| Super + Alt + Shift + Up / Down | Move the active window up or down one row and follow it |
+| Super + Space | Open or cancel the desktop overview |
 
-Y=1での上移動は何もしません。未訪問の列はY=1から始まり、訪問済みの列では最後のYに戻ります。同じ列への再移動も何もしません。
+Moving up at Y=1 does nothing. Unvisited columns start at Y=1; previously visited columns return to their last Y position. Switching to the current column also does nothing.
 
-**上記25個のキーの既存割り当てを置き換えます。** Super + Shift + 数字も、固定IDへの移動から列の記憶位置への移動に変わります。他のキーは変更しません。0.56.2の`hl.unbind()`は同じキー表記を持つ他のsubmapの割り当ても解除するため、これらのキーを別のsubmapでも使っている設定では導入前に調整してください。モジュールを読み込んだ後に同じキーを再登録しないでください。
+**The existing bindings for the 25 key combinations above are replaced.** Super + Shift + number also changes from moving a window to a fixed workspace ID to moving it to the column's remembered position. Other keys are unchanged. In 0.56.2, `hl.unbind()` also removes bindings in other submaps with the same key notation. If your configuration uses these keys in other submaps, adjust it before installing. Do not register the same keys again after loading the module.
 
-特殊ワークスペースを表示している間、グリッド操作は何もしません。特殊ワークスペースの既存キーはそのまま使用できます。ウィンドウのない空間と固定表示（pinned）のウィンドウではウィンドウ移動を行いません。
+Grid controls do nothing while a special workspace is visible. Existing special workspace bindings remain available. Window move operations do nothing when there is no active window or when the window is pinned.
 
-## デスクトップ選択画面
+## Desktop overview
 
-Super + Spaceで現在の画面を背景としてぼかし、中央に選択中のデスクトップ、上下に同じ列の隣の行、左右に隣の列の記憶位置を表示します。中央は周囲より大きく、選択の変更・開閉は約210msで補間します。
+Super + Space opens the overview over a blurred image of the current screen. The selected desktop appears in the center, with adjacent rows in the same column above and below, and the remembered positions of adjacent columns to the left and right. The center preview is larger than the surrounding previews. Selection changes and opening and closing transitions animate over approximately 210 ms.
 
-| 選択画面内のキー | 操作 |
+| Key in the overview | Action |
 |---|---|
-| H / J / K / L（矢印キーも使用可） | 左／下／上／右の候補を中央へ移動 |
-| Enter | 中央の候補へ移動して閉じる |
-| Esc / Super + Space | キャンセルして閉じる |
+| H / J / K / L (or arrow keys) | Bring the left / down / up / right candidate to the center |
+| Enter | Switch to the center candidate and close the overview |
+| Esc / Super + Space | Cancel and close the overview |
 
-選択中は実際のワークスペースと列の記憶を変更しません。仮の選択位置を列ごとに保持し、Enterで最後に選んだ座標だけを確定します。先頭の行・左右の端では範囲外の候補を表示せず、未使用の行は空のデスクトップとして選べます。
+Browsing does not change the actual workspace or the columns' remembered positions. A temporary selection is kept for each column, and Enter commits only the final selected coordinates. Out-of-range candidates are hidden at the top row and the left and right edges. Unused rows can be selected as empty desktops.
 
-プレビューは開いた時点のワークスペースをGPU上で描画した静止画です。選択変更では新しい候補だけを取得し、過去の候補は最大9枚に制限します。保存する画像の長辺は1600px以下、ぼかした背景は640px以下です。画像をディスクへ保存しません。閉じると画像と入力コールバックを解放し、静止中はアニメーション用タイマーも停止します。
+Previews are still images of workspaces rendered on the GPU when the overview opens. Selection changes capture only new candidates, and previously captured candidates are limited to nine images. Stored preview images have a maximum long edge of 1600 px, and the blurred background is limited to 640 px. Images are never saved to disk. Closing the overview releases the images and input callbacks. The animation timer also stops while the overview is idle.
 
-設定リロード、外部からのワークスペース変更、モニター構成の変更、セッションロックで選択画面を終了します。別モニターに所属するワークスペースはプレースホルダーを表示します。プレビューを取得するための実際のワークスペース移動やウィンドウ移動は行いません。
+The overview closes on configuration reload, external workspace changes, monitor configuration changes, or session lock. Workspaces belonging to another monitor show placeholders. Capturing previews does not switch actual workspaces or move windows.
 
-## 位置記憶と制約
+## Position memory and limitations
 
-内部では`id = x + 10 * (y - 1)`に変換します。例えば(1, 2)は11、(2, 5)は42です。既存の正のワークスペースIDもこの対応に組み込まれるため、IDが11以上の既存ワークスペースも利用されます。
+Coordinates are mapped internally with `id = x + 10 * (y - 1)`. For example, (1, 2) maps to 11, and (2, 5) maps to 42. Existing positive workspace IDs are included in this mapping, so existing workspaces with IDs of 11 or higher are also used.
 
-行数の固定上限は設けていません。座標変換はLuaとLuaJITで整数を正確に扱えるID範囲（1〜2^53−1）を検証し、範囲外を拒否します。負のIDや特殊ワークスペースは記憶しません。
+There is no fixed maximum number of rows. Coordinate conversion validates that IDs fall within the exact integer range supported by both Lua and LuaJIT (1 to 2^53−1) and rejects values outside that range. Negative IDs and special workspaces are not remembered.
 
-ワークスペース変更・モニターフォーカス・起動・リロードのイベントで同期し、操作直前にも現在位置を確認します。ジェスチャー、マウス、`hyprctl`などによる外部切り替えも記憶します。
+Position memory is synchronized on workspace changes, monitor focus changes, startup, and reload, and the current position is checked immediately before each operation. External switches made through gestures, the mouse, `hyprctl`, and other means are also remembered.
 
-記憶はLuaセッション内のみです。**0.56.2では設定リロードでLua状態と登録ハンドラが破棄されるため、他の列の記憶はリセットされ、現在のワークスペースの位置だけを再取得します。** 同じLuaセッションでの再読み込みは登録を重複させません。再起動後の永続化は実装していません。
+Memory lasts only for the current Lua session. **In 0.56.2, reloading the configuration destroys the Lua state and registered handlers, so other columns' remembered positions are reset and only the current workspace's position is recovered.** Loading the module again within the same Lua session does not duplicate registrations. Persistence across restarts is not implemented.
 
-マルチモニターでは列の記憶を共有し、切り替え先をアクティブモニターに表示するHyprland標準の処理を使います。モニターごとの独立したグリッド、表示中の別モニターとの競合、ホットプラグの動作は未検証です。
+With multiple monitors, column memory is shared, and Hyprland's standard behavior brings the destination workspace to the active monitor. Independent grids per monitor, conflicts with workspaces displayed on other monitors, and hotplug behavior have not been verified.
 
-## Luaからの操作
+## Lua API
 
 ```lua
 local grid = require("hypraxis")
 grid.switch_column(2)
-grid.step(1)                     -- 下へ
-grid.move_to_column(3)           -- 移動して追従
-grid.move_vertical(-1, false)    -- ウィンドウだけ上へ移動
-grid.go_to(2, 5)                -- 絶対座標へ移動
-grid.toggle_overview()          -- 選択画面を開閉
+grid.step(1)                     -- Move down
+grid.move_to_column(3)           -- Move the window and follow it
+grid.move_vertical(-1, false)    -- Move only the window up
+grid.go_to(2, 5)                -- Switch to absolute coordinates
+grid.toggle_overview()          -- Toggle the overview
 local x, y = grid.position()
 ```
 
-操作は成功時に`true`、境界・無効な状態・失敗時に`nil, reason`を返します。`position()`は`x, y`または`nil, reason`を返します。Hyprlandの移動に失敗した場合、移動先を記憶に書き込みません。
+Operations return `true` on success, or `nil, reason` at a boundary, in an invalid state, or on failure. `position()` returns `x, y` or `nil, reason`. If a Hyprland move fails, the destination is not written to position memory.
 
-座標変換は`require("hypraxis.core").to_id(x, y)`と`from_id(id)`で独立して利用できます。コアの省略可能な第3引数（`from_id`では第2引数）で列数を指定できますが、標準キーバインドとHyprland連携は10列です。
+Coordinate conversion can be used independently through `require("hypraxis.core").to_id(x, y)` and `from_id(id)`. The core accepts an optional third argument (the second argument for `from_id`) to specify the number of columns, but the default keybindings and Hyprland integration use 10 columns.
 
-## 削除
+## Uninstallation
 
-`sh scripts/uninstall.sh`で導入したファイルと単独の`require("hypraxis")`行を削除し、設定をリロードします。設定バックアップと無関係なファイルは保持します。独自の配置先には`--config-dir DIR`を指定できます。
+Run `sh scripts/uninstall.sh` to remove the installed files and the standalone `require("hypraxis")` line and reload the configuration. Configuration backups and unrelated files are preserved. Use `--config-dir DIR` for a custom installation directory.
 
-手動で削除する場合は`hyprland.lua`から`require("hypraxis")`の1行を削除し、`hyprctl reload config-only`を実行します。その後、導入した`hypraxis.lua`、`hypraxis/`、`hypraxis_overview.so`、`hypraxis-overview/`の所有ファイルを削除します。元の設定にあるキーバインドが復活します。読み込み済みネイティブライブラリ自体はHyprland再起動までメモリに残ります。ワークスペースやウィンドウを削除する処理はありません。
+To uninstall manually, remove the `require("hypraxis")` line from `hyprland.lua` and run `hyprctl reload config-only`. Then remove the files installed by Hypraxis: `hypraxis.lua`, its files under `hypraxis/`, `hypraxis_overview.so`, and its files under `hypraxis-overview/`. The keybindings in your original configuration are restored. The loaded native library remains in memory until Hyprland restarts. Uninstallation does not delete workspaces or windows.
 
-## 開発と検証
+## Development and testing
 
 ```sh
 make test
@@ -134,20 +134,20 @@ make test LUA=luajit
 make test-overview
 ```
 
-テストは通常のLuaで実行できます。座標と境界、独立した列の記憶、外部イベント、失敗時の整合性、特殊ワークスペース、ウィンドウ移動、キーバインドの競合、再登録を検証します。Hyprland連携部分はAPIのモックを使用します。
+The tests run with a standard Lua interpreter. They cover coordinates and boundaries, independent column memory, external events, consistency after failures, special workspaces, window moves, keybinding conflicts, and repeated registration. The Hyprland integration tests use API mocks.
 
-Lua 5.5.1とLuaJIT 2.1で、それぞれ10,334件のチェックが通っています。従来のグリッド操作についてはHyprland 0.56.2の単一モニター環境で、設定エラーがないこと、列・行の切り替え、外部切り替えとの同期、テスト用のタイルウィンドウの移動と非追従移動、対象外キーの保持、リロード後の重複登録防止を実機で確認しました。
+All 10,334 checks have passed on both Lua 5.5.1 and LuaJIT 2.1. The grid controls have also been verified in a live Hyprland 0.56.2 session with a single monitor: no configuration errors, column and row switching, synchronization with external switches, moving test tiled windows with and without following them, preservation of unrelated keys, and prevention of duplicate registrations after reload.
 
-インストールと削除の回帰テスト45件も通っています。インストール先だけをLuaの検索パスに指定しても`require("hypraxis")`が成功し、同じディレクトリのネイティブプラグインを探索できることもモックで検証しています。隔離したHyprlandでは、仮想キーボードによるSuper + Space・HJKL・Enter・Esc、64回の連続操作、開いたままのリロード／アンロード、画像リソースの解放、アプリへの入力漏れ防止を含む8項目が成功しました。通常の作業環境でも既存プラグインとの共存、Blurとプレビュー、仮選択とキャンセル、静止中のタイマー停止、既存ウィンドウと設定の保持を確認しています。
+All 45 installation and uninstallation regression tests have also passed. Mock tests verify that `require("hypraxis")` succeeds when Lua's search path contains only the installation directory and that the native plugin can be located in the same directory. In an isolated Hyprland instance, eight checks passed, covering Super + Space, HJKL, Enter, and Esc through a virtual keyboard, 64 consecutive operations, reload and unload while the overview is open, image resource cleanup, and prevention of input leaking to applications. The regular working environment has also been checked for coexistence with existing plugins, blur and previews, temporary selection and cancellation, timer suspension while idle, and preservation of existing windows and configuration.
 
-`make test-overview`は別プロセスのHyprlandを起動し、foot・wtype・grimを使って実際の描画・入力・確定・取消・リロード・アンロードを検証します。親のHyprlandを操作しません。ログと画像はGit除外対象の`.local/overview-test/`へ保存します。
+`make test-overview` starts a separate Hyprland process and uses foot, wtype, and grim to verify actual rendering, input, confirmation, cancellation, reload, and unload. It does not control the parent Hyprland instance. Logs and images are saved to `.local/overview-test/`, which is excluded from Git.
 
-物理キー入力、Hyprlandの再起動、複数モニター、他のHyprlandバージョンは未検証です。
+Physical keyboard input, Hyprland restarts, multiple monitors, and other Hyprland versions have not been verified.
 
-APIはインストール済みLua stubと[Hyprland v0.56.2のソース](https://github.com/hyprwm/Hyprland/tree/v0.56.2/src/config/lua)を基準にしています。[公式キー設定](https://wiki.hypr.land/configuring/core/binds/)と[公式イベント一覧](https://wiki.hypr.land/configuring/core/advanced-configuration/events/)は最新開発版を扱う場合があるため、使用するバージョンのstubと照合してください。
+The API usage is based on the installed Lua stubs and the [Hyprland v0.56.2 source](https://github.com/hyprwm/Hyprland/tree/v0.56.2/src/config/lua). The [official keybinding documentation](https://wiki.hypr.land/configuring/core/binds/) and [official event list](https://wiki.hypr.land/configuring/core/advanced-configuration/events/) may describe the latest development version, so check them against the stubs for your installed version.
 
-個人設定、調査ログ、絶対パス、認証情報をリポジトリに追加しないでください。ローカル専用の`PROMPT.md`と`docs/`はGitの除外対象として扱います。
+Do not add personal configuration, investigation logs, absolute paths, or credentials to the repository. The local-only `PROMPT.md` and `docs/` are treated as excluded from Git.
 
-## ライセンス
+## License
 
-選定待ちです。`LICENSE`は選定後に追加します。
+A license has not yet been selected. A `LICENSE` file will be added once one is chosen.
