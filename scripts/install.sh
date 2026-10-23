@@ -44,10 +44,10 @@ config_file=$config_dir/hyprland.lua
 [ -f "$config_file" ] || die "expected an existing hyprland.lua in $config_dir"
 config_target=$(readlink -f -- "$config_file") || die "cannot resolve hyprland.lua"
 [ -f "$plugin_file" ] && [ -r "$plugin_file" ] || die "build the native plugin first, or pass --plugin FILE"
-for directory in workspace_grid hypraxis-overview; do
+for directory in hypraxis hypraxis-overview; do
     [ ! -L "$config_dir/$directory" ] || die "$directory is a directory symlink; replace that link with a local directory before installing"
 done
-for module in workspace_grid.lua workspace_grid/core.lua workspace_grid/hyprland.lua workspace_grid/overview.lua; do
+for module in hypraxis.lua hypraxis/core.lua hypraxis/hyprland.lua hypraxis/overview.lua; do
     [ -f "$project_dir/$module" ] || die "missing source module: $module"
     [ ! -d "$config_dir/$module" ] || die "installation path is a directory: $module"
 done
@@ -57,7 +57,7 @@ temporary=
 trap '[ -z "$temporary" ] || rm -f -- "$temporary"' EXIT
 trap 'exit 1' HUP INT TERM
 umask 077
-mkdir -p -- "$config_dir/workspace_grid" "$config_dir/hypraxis-overview"
+mkdir -p -- "$config_dir/hypraxis" "$config_dir/hypraxis-overview"
 
 atomic_copy() {
     temporary=$(mktemp "$2.hypraxis.XXXXXX")
@@ -79,7 +79,7 @@ if [ -e "$immutable_plugin" ] || [ -L "$immutable_plugin" ]; then
 else
     atomic_copy "$plugin_file" "$immutable_plugin"
 fi
-for module in workspace_grid/core.lua workspace_grid/hyprland.lua workspace_grid/overview.lua; do
+for module in hypraxis/core.lua hypraxis/hyprland.lua hypraxis/overview.lua; do
     atomic_copy "$project_dir/$module" "$config_dir/$module"
 done
 temporary=$(mktemp "$config_dir/.hypraxis-link.XXXXXX")
@@ -88,13 +88,13 @@ ln -s -- "hypraxis-overview/$plugin_hash.so" "$temporary"
 mv -f -- "$temporary" "$config_dir/hypraxis_overview.so"
 temporary=
 # Publish the watched entrypoint only after every dependency is available.
-atomic_copy "$project_dir/workspace_grid.lua" "$config_dir/workspace_grid.lua"
+atomic_copy "$project_dir/hypraxis.lua" "$config_dir/hypraxis.lua"
 
 # Preserve the user's symlink and edit its resolved target atomically.
 if ! awk '
     BEGIN {
         quote = "[\"" sprintf("%c", 39) "]"
-        module = quote "workspace_grid" quote
+        module = quote "hypraxis" quote
         pattern = "require[ \t]*(\\([ \t]*" module "[ \t]*\\)|[ \t]+" module ")"
     }
     { line = $0; sub(/--.*/, "", line); if (line ~ pattern) found = 1 }
@@ -104,7 +104,7 @@ if ! awk '
     cp -p -- "$config_target" "$backup"
     temporary=$(mktemp "$config_target.hypraxis.XXXXXX")
     cp -p -- "$config_target" "$temporary"
-    printf '\nrequire("workspace_grid")\n' >> "$temporary"
+    printf '\nrequire("hypraxis")\n' >> "$temporary"
     mv -f -- "$temporary" "$config_target"
     temporary=
     printf '%s\n' "Saved configuration backup: $backup"
