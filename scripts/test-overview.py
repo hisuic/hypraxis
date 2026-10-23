@@ -106,8 +106,8 @@ tostring(s.previews)},',')) end"""
         if not immutable.exists():
             immutable.write_bytes(binary)
         shutil.copy2(ROOT / "tests/overview-session.lua", config / "hyprland.lua")
-        shutil.copy2(ROOT / "workspace_grid.lua", config / "workspace_grid.lua")
-        for name, target in (("workspace_grid", ROOT / "workspace_grid"),
+        shutil.copy2(ROOT / "hypraxis.lua", config / "hypraxis.lua")
+        for name, target in (("hypraxis", ROOT / "hypraxis"),
                              ("hypraxis_overview.so", immutable)):
             link = config / name
             if link.is_symlink():
@@ -257,7 +257,7 @@ tostring(s.previews)},',')) end"""
         self.wait(lambda: self.status() is None, "plugin namespace removed")
         assert self.active_id() == 12, "Unload changed the active workspace"
         self.unchanged(baseline)
-        self.evaluate("assert(not require('workspace_grid').overview.is_open())")
+        self.evaluate("assert(not require('hypraxis').overview.is_open())")
         self.mark("unloading an open overview removes callbacks and keeps the child compositor alive")
 
         for logfile in self.output.glob("input-*.bin"):
