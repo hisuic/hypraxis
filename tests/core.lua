@@ -1,4 +1,4 @@
-local core = require("workspace_grid.core")
+local core = require("hypraxis.core")
 local count = 0
 
 local function check(condition, message)
