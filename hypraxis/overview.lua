@@ -1,5 +1,5 @@
 -- The compositor renders the overview; Lua owns its uncommitted grid cursor.
-local core = require("workspace_grid.core")
+local core = require("hypraxis.core")
 local M = {}
 
 local function invoke(native, operation, ...)
