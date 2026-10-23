@@ -11,4 +11,4 @@ hl.config({
         background_color = "rgb(162439)", enable_anr_dialog = false },
     debug = { disable_logs = false },
 })
-require("workspace_grid")
+require("hypraxis")
