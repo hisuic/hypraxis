@@ -1,6 +1,6 @@
-local adapter = require("workspace_grid.hyprland")
-local overview = require("workspace_grid.overview")
-local core = require("workspace_grid.core")
+local adapter = require("hypraxis.hyprland")
+local overview = require("hypraxis.overview")
+local core = require("hypraxis.core")
 local count = 0
 local function check(condition, message)
     assert(condition, message)
