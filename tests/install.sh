@@ -5,6 +5,7 @@ python3 - "$project_dir" <<'PY'
 import hashlib
 import os
 from pathlib import Path
+import shlex
 import shutil
 import stat
 import subprocess
@@ -33,9 +34,9 @@ with tempfile.TemporaryDirectory(prefix="hypraxis-install-test-") as temporary:
     mock_mv = mock_bin / "mv"
     mock_mv.write_text('''#!/bin/sh
 for destination do :; done
-if [ "$destination" = "$HYP_TEST_CONFIG/workspace_grid.lua" ]; then
+if [ "$destination" = "$HYP_TEST_CONFIG/hypraxis.lua" ]; then
     for module in core.lua hyprland.lua overview.lua; do
-        [ -f "$HYP_TEST_CONFIG/workspace_grid/$module" ] || exit 90
+        [ -f "$HYP_TEST_CONFIG/hypraxis/$module" ] || exit 90
     done
     [ -L "$HYP_TEST_CONFIG/hypraxis_overview.so" ] || exit 91
 fi
@@ -52,7 +53,7 @@ exec "$HYP_TEST_REAL_MV" "$@"
     main = config / "hyprland.lua"
     main.symlink_to("../main config.lua")
     symlink_inode = main.lstat().st_ino
-    modules = config / "workspace_grid"
+    modules = config / "hypraxis"
     modules.mkdir()
     sentinel = modules / "unrelated.lua"
     sentinel.write_text("-- retain unrelated module\n")
@@ -74,16 +75,51 @@ exec "$HYP_TEST_REAL_MV" "$@"
     run(installer, *install_args)
     check(main.is_symlink() and main.lstat().st_ino == symlink_inode,
           "installation preserves the main configuration symlink and inode")
-    check(target.read_text() == original + '\nrequire("workspace_grid")\n',
+    check(target.read_text() == original + '\nrequire("hypraxis")\n',
           "installation appends exactly one standalone require line")
     check(stat.S_IMODE(target.stat().st_mode) == 0o640, "configuration mode is preserved")
     backups = list(root.glob("main config.lua.hypraxis-backup-*"))
     check(len(backups) == 1 and backups[0].read_text() == original,
           "configuration backup preserves its original contents")
-    for module in ("workspace_grid.lua", "workspace_grid/core.lua",
-                   "workspace_grid/hyprland.lua", "workspace_grid/overview.lua"):
+    for module in ("hypraxis.lua", "hypraxis/core.lua",
+                   "hypraxis/hyprland.lua", "hypraxis/overview.lua"):
         check((config / module).read_bytes() == (project / module).read_bytes(),
               f"installed module matches source: {module}")
+    loaded = subprocess.run(
+        [*shlex.split(env.get("LUA", "lua")), "-", str(config)],
+        cwd=root, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        input='''
+package.path = arg[1] .. "/?.lua"
+local bindings, subscriptions, plugins = 0, 0, {}
+hl = {
+    get_current_submap = function() return "" end,
+    get_active_workspace = function() return { id = 1 } end,
+    get_active_special_workspace = function() end,
+    get_active_window = function() end,
+    unbind = function() end,
+    bind = function() bindings = bindings + 1 end,
+    on = function()
+        subscriptions = subscriptions + 1
+        return { remove = function() end }
+    end,
+    dsp = { focus = function() end, window = { move = function() end } },
+    dispatch = function() return { ok = true } end,
+    plugin = { load = function(path) plugins[#plugins + 1] = path end },
+}
+local grid = require("hypraxis")
+local x, y = grid.position()
+assert(x == 1 and y == 1, "installed module exposes the grid API")
+assert(require("hypraxis.core").to_id(2, 5) == 42, "installed core is loadable")
+assert(type(grid.overview) == "table", "installed overview is loadable")
+assert(require("hypraxis") == grid, "cached require returns the same controller")
+package.loaded.hypraxis = nil
+assert(require("hypraxis") == grid, "cache clearing preserves the controller")
+assert(bindings == 25 and subscriptions == 4, "loading remains idempotent")
+assert(#plugins == 1 and plugins[1] == arg[1] .. "/hypraxis_overview.so",
+    "native plugin is loaded beside the installed hypraxis module")
+''')
+    check(loaded.returncode == 0,
+          f"installed hypraxis loads outside the checkout: {loaded.stdout}{loaded.stderr}")
     installed = config / "hypraxis_overview.so"
     check(installed.is_symlink() and installed.read_bytes() == plugin.read_bytes(),
           "native entrypoint resolves to the installed plugin")
@@ -92,7 +128,7 @@ exec "$HYP_TEST_REAL_MV" "$@"
     check(old_copy.name == hashlib.sha256(plugin.read_bytes()).hexdigest() + ".so",
           "native copies use content-addressed filenames")
     run(installer, *install_args)
-    check(target.read_text() == original + '\nrequire("workspace_grid")\n'
+    check(target.read_text() == original + '\nrequire("hypraxis")\n'
           and len(list(root.glob("main config.lua.hypraxis-backup-*"))) == 1,
           "repeated installation leaves require and backups unchanged")
     check(old_copy.stat().st_ino == old_inode, "same-version installation reuses the native inode")
@@ -112,25 +148,25 @@ exec "$HYP_TEST_REAL_MV" "$@"
     check(target.read_text() == original + "\n", "uninstallation removes only the require line")
     check(sentinel.is_file() and native_sentinel.read_bytes() == b"retain unrelated binary",
           "uninstallation keeps unrelated Lua and native files")
-    check(not (config / "workspace_grid.lua").exists() and not installed.is_symlink()
+    check(not (config / "hypraxis.lua").exists() and not installed.is_symlink()
           and not old_copy.exists(), "uninstallation removes owned entrypoints and native copies")
     run(uninstaller, *uninstall_args)
     check(target.read_text() == original + "\n", "repeated uninstallation leaves configuration unchanged")
     check(not reload_log.exists(), "--no-reload never invokes hyprctl")
 
-    target.write_text('local grid = require("workspace_grid")\n')
+    target.write_text('local grid = require("hypraxis")\n')
     run(installer, *install_args)
-    check(target.read_text() == 'local grid = require("workspace_grid")\n',
+    check(target.read_text() == 'local grid = require("hypraxis")\n',
           "installation recognizes custom require expressions without duplication")
     result = run(uninstaller, *uninstall_args, succeeds=False)
-    check("custom workspace_grid require" in result.stderr
-          and (config / "workspace_grid.lua").is_file()
-          and target.read_text() == 'local grid = require("workspace_grid")\n',
+    check("custom Hypraxis require" in result.stderr
+          and (config / "hypraxis.lua").is_file()
+          and target.read_text() == 'local grid = require("hypraxis")\n',
           "custom require expressions fail uninstallation before mutation")
-    target.write_text('require("workspace_grid")\n  require \'workspace_grid\';\n'
-                      'require("other")\n-- require("workspace_grid")\n')
+    target.write_text('require("hypraxis")\n  require \'hypraxis\';\n'
+                      'require("other")\n-- require("hypraxis")\n')
     run(uninstaller, *uninstall_args)
-    check(target.read_text() == 'require("other")\n-- require("workspace_grid")\n',
+    check(target.read_text() == 'require("other")\n-- require("hypraxis")\n',
           "only exact standalone requires are removed; unrelated requires and comments remain")
 
     safe_config = root / "symlink safety"
@@ -140,13 +176,13 @@ exec "$HYP_TEST_REAL_MV" "$@"
     external.mkdir()
     external_sentinel = external / "core.lua"
     external_sentinel.write_text('-- external source\n')
-    for directory in ("workspace_grid", "hypraxis-overview"):
+    for directory in ("hypraxis", "hypraxis-overview"):
         link = safe_config / directory
         link.symlink_to(external, target_is_directory=True)
         result = run(installer, "--config-dir", safe_config, "--plugin", plugin,
                      "--no-reload", succeeds=False)
         check("directory symlink" in result.stderr and link.is_symlink()
-              and not (safe_config / "workspace_grid.lua").exists(),
+              and not (safe_config / "hypraxis.lua").exists(),
               "external directory symlinks fail installation before publishing files")
         run(uninstaller, "--config-dir", safe_config, "--no-reload")
         check(not link.is_symlink() and external_sentinel.read_text() == '-- external source\n',
@@ -161,7 +197,7 @@ exec "$HYP_TEST_REAL_MV" "$@"
     check(reload_log.read_text() == "reload\nreload\n",
           "default XDG installation and uninstallation use only the mocked reload")
     check((default_config / "hyprland.lua").read_text() == '-- XDG default\n\n'
-          and not (default_config / "workspace_grid").exists(),
+          and not (default_config / "hypraxis").exists(),
           "default XDG configuration stays intact after removal")
 
 print(f"install: {checks} checks passed")
