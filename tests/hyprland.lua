@@ -1,4 +1,4 @@
-local adapter = require("workspace_grid.hyprland")
+local adapter = require("hypraxis.hyprland")
 local count = 0
 local function check(condition, message)
     assert(condition, message)
