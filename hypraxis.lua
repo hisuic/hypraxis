@@ -1,5 +1,5 @@
 -- Load this after existing workspace keybindings in hyprland.lua.
-local existing = rawget(_G, "__hypraxis_workspace_grid")
+local existing = rawget(_G, "__hypraxis_grid")
 if existing then
     return existing
 end
@@ -7,9 +7,9 @@ end
 local api = rawget(_G, "hl")
 assert(type(api) == "table" and type(api.bind) == "function"
     and type(api.unbind) == "function" and type(api.get_current_submap) == "function",
-    "workspace_grid requires Hyprland 0.56.2's Lua configuration API")
-assert(api.get_current_submap() == "", "load workspace_grid in the default submap")
-local grid = require("workspace_grid.hyprland").new(api)
+    "hypraxis requires Hyprland 0.56.2's Lua configuration API")
+assert(api.get_current_submap() == "", "load hypraxis in the default submap")
+local grid = require("hypraxis.hyprland").new(api)
 
 local function bind(keys, callback, description)
     -- Replace just this chord so the old dispatcher cannot run alongside ours.
@@ -42,7 +42,7 @@ end
 -- Plugin loading is declarative during config evaluation in Hyprland 0.56.2.
 -- The Lua grid stays usable when the optional native module is not installed.
 if type(api.plugin) == "table" and type(api.plugin.load) == "function" then
-    local module_file = package.searchpath and package.searchpath("workspace_grid", package.path)
+    local module_file = package.searchpath and package.searchpath("hypraxis", package.path)
     if module_file then
         local directory = module_file:match("^(.*)/[^/]+$") or "."
         local plugin_file = directory .. "/hypraxis_overview.so"
@@ -54,7 +54,7 @@ if type(api.plugin) == "table" and type(api.plugin.load) == "function" then
     end
 end
 
-grid.overview = require("workspace_grid.overview").new(api, grid)
+grid.overview = require("hypraxis.overview").new(api, grid)
 function grid.toggle_overview()
     return grid.overview.toggle()
 end
@@ -65,5 +65,5 @@ bind("SUPER + space", function()
     end
 end, "open desktop overview")
 
-rawset(_G, "__hypraxis_workspace_grid", grid)
+rawset(_G, "__hypraxis_grid", grid)
 return grid
